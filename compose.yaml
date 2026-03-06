@@ -1,0 +1,151 @@
+services:
+    # Dev
+    web-dev:
+        labels:
+            com.example.description: 'Todo App - Dev'
+            com.example.version: '1.0.0'
+        profiles:
+            - dev
+        build:
+            context: .
+            target: dev
+        ports:
+            - '${APP_PORT:?APP_PORT is not set}:3000'
+            - '${DEBUG_PORT:?DEBUG_PORT is not set}:9229'
+        environment:
+            NODE_ENV: development
+            POSTGRES_HOST: db-dev
+            POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is not set}
+            POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+            POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is not set}
+        secrets:
+            - db_password
+        volumes:
+            - ./src:/app/src:ro
+        depends_on:
+            db-dev:
+                condition: service_healthy
+        networks:
+            - frontend
+            - backend
+        restart: no
+        init: true
+
+    db-dev:
+        profiles:
+            - dev
+        image: postgres:16
+        user: postgres
+        expose:
+            - 5432
+        environment:
+            POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is not set}
+            POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+            POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is not set}
+        secrets:
+            - db_password
+        volumes:
+            - postgres_data_dev:/var/lib/postgresql/data
+        healthcheck:
+            test:
+                [
+                    'CMD-SHELL',
+                    'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}',
+                ]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+            start_period: 10s
+        networks:
+            - backend
+        restart: no
+
+    # Prod
+    web-prod:
+        labels:
+            com.example.description: 'Todo App - Prod'
+            com.example.version: '1.0.0'
+        profiles:
+            - prod
+        build:
+            context: .
+            target: prod
+        ports:
+            - '${APP_PORT:?APP_PORT is not set}:3000'
+        environment:
+            NODE_ENV: production
+            POSTGRES_HOST: db-prod
+            POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is not set}
+            POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+            POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is not set}
+        secrets:
+            - db_password
+        depends_on:
+            db-prod:
+                condition: service_healthy
+        networks:
+            - frontend
+            - backend
+        restart: unless-stopped
+        init: true
+        security_opt:
+            - no-new-privileges:true
+        read_only: true
+        tmpfs:
+            - /tmp
+        deploy:
+            resources:
+                limits:
+                    cpus: '0.50'
+                    memory: 512M
+                reservations:
+                    cpus: '0.25'
+                    memory: 256M
+        logging:
+            driver: json-file
+            options:
+                max-size: 10m
+                max-file: 3
+
+    db-prod:
+        profiles:
+            - prod
+        image: postgres:16
+        user: postgres
+        expose:
+            - 5432
+        environment:
+            POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is not set}
+            POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+            POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is not set}
+        secrets:
+            - db_password
+        volumes:
+            - postgres_data_prod:/var/lib/postgresql/data
+        healthcheck:
+            test:
+                [
+                    'CMD-SHELL',
+                    'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}',
+                ]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+            start_period: 10s
+        networks:
+            - backend
+        restart: always
+
+# Infrastructure
+volumes:
+    postgres_data_dev:
+    postgres_data_prod:
+
+networks:
+    frontend:
+    backend:
+        internal: true
+
+secrets:
+    db_password:
+        file: secrets/db_password.txt
