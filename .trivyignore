@@ -1,0 +1,9 @@
+# Reviewed: 2026-03-06
+# Owner: nciricvegait
+# CVE-2026-0861: OS-level: glibc memalign overflow - no fix from Debian, not exploitable in our Node.js context
+# CVE-2023-45853: OS-level: zlib minizip integer overflow - Debian will_not_fix, minizip not used by our application
+# CVE-2024-29415: node-ip: SSRF bypass - no fix available, our app doesn't use ip package directly (transitive via sqlite3 build)
+
+CVE-2026-0861
+CVE-2023-45853
+CVE-2024-29415
