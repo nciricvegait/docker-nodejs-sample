@@ -48,18 +48,16 @@ jobs:
                   username: ${{ github.actor }}
                   password: ${{ secrets.GITHUB_TOKEN }}
 
-            - name: Build and push
+            - name: Build
               uses: docker/build-push-action@v6
               with:
                   context: .
                   target: prod
-                  push: true
+                  load: true
                   tags: ${{ steps.meta.outputs.tags }}
                   labels: ${{ steps.meta.outputs.labels }}
                   cache-from: type=gha
                   cache-to: type=gha,mode=max
-                  provenance: true
-                  sbom: true
 
             - name: Scan for vulnerabilities
               uses: aquasecurity/trivy-action@master
@@ -77,3 +75,16 @@ jobs:
               if: always()
               with:
                   sarif_file: 'trivy-results.sarif'
+
+            - name: Push
+              uses: docker/build-push-action@v6
+              with:
+                  context: .
+                  target: prod
+                  push: true
+                  tags: ${{ steps.meta.outputs.tags }}
+                  labels: ${{ steps.meta.outputs.labels }}
+                  cache-from: type=gha
+                  cache-to: type=gha,mode=max
+                  provenance: true
+                  sbom: true
